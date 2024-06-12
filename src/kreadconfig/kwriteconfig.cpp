@@ -10,6 +10,7 @@
 */
 
 #include <KConfig>
+#include <KConfigBase>
 #include <KConfigGroup>
 #include <QCommandLineParser>
 #include <QCoreApplication>
@@ -34,6 +35,7 @@ int main(int argc, char **argv)
                            QCoreApplication::translate("main", "Type of variable. Use \"bool\" for a boolean, otherwise it is treated as a string"),
                            QStringLiteral("type")));
     parser.addOption(QCommandLineOption(QStringLiteral("delete"), QCoreApplication::translate("main", "Delete the designated key if enabled")));
+    parser.addOption(QCommandLineOption(QStringLiteral("notify")));
     parser.addPositionalArgument(QStringLiteral("value"), QCoreApplication::translate("main", "The value to write. Mandatory, on a shell use '' for empty"));
 
     parser.process(app);
@@ -43,6 +45,7 @@ int main(int argc, char **argv)
     QString file = parser.value(QStringLiteral("file"));
     QString type = parser.value(QStringLiteral("type")).toLower();
     bool del = parser.isSet(QStringLiteral("delete"));
+    bool isNotify = parser.isSet(QStringLiteral("notify"));
 
     QString value;
     if (del) {
@@ -51,6 +54,13 @@ int main(int argc, char **argv)
         parser.showHelp(1);
     } else {
         value = parser.positionalArguments().at(0);
+    }
+
+    KConfig::WriteConfigFlag flag;
+    if (isNotify) {
+        flag = KConfigBase::Notify;
+    } else {
+        flag = KConfigBase::Normal;
     }
 
     KConfig *konfig;
@@ -85,11 +95,11 @@ int main(int argc, char **argv)
                          || value == QLatin1String{"on"}
                          || value == QLatin1String{"yes"}
                          || value == QLatin1String{"1"}; /* clang-format on */
-        cfgGroup.writeEntry(key, boolvalue);
+        cfgGroup.writeEntry(key, boolvalue, flag);
     } else if (type == QLatin1String{"path"}) {
-        cfgGroup.writePathEntry(key, value);
+        cfgGroup.writePathEntry(key, value, flag);
     } else {
-        cfgGroup.writeEntry(key, value);
+        cfgGroup.writeEntry(key, value, flag);
     }
     konfig->sync();
     delete konfig;
